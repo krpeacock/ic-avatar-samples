@@ -1,23 +1,15 @@
-import Text "mo:base/Text";
 import Trie "mo:base/Trie";
-import Bool "mo:base/Bool";
-import Nat32 "mo:base/Nat32";
+import Hash "mo:base/Hash";
+import Nat "mo:base/Nat";
 
 actor Avatar {
-    type GivenName = Text;
-    type FamilyName = Text;
-    type Name = Text;
-    type DisplayName = Text;
-    type Location = Text;
-    type About = Text;
-
     type Bio = {
-        givenName: ?GivenName;
-        FamilyName: ?FamilyName;
-        name: ?Name;
-        displayName: ?DisplayName;
-        location: ?Location;
-        about: ?About;
+        givenName: ?Text;
+        familyName: ?Text;
+        name: ?Text;
+        displayName: ?Text;
+        location: ?Text;
+        about: ?Text;
     };
 
     type Profile = {
@@ -25,71 +17,102 @@ actor Avatar {
     };
 
     // Application state
-    private stable var profiles : Trie.Trie<Nat32, Profile> = Trie.empty();
+    stable var profiles : Trie.Trie<Nat, Profile> = Trie.empty();
 
-    private stable var next : Nat32 = 1;
-    
+    stable var next : Nat = 1;
+
+    // Application interface
+
     // Create a profile
     public func create (profile: Profile) : async Bool {
         let profileId = next;
         next += 1;
 
-        profiles := Trie.put(
-            profiles,           // Target Trie
+        let (newProfiles, existing) = Trie.put(
+            profiles,           // Target trie
             key(profileId),     // Key
-            Nat32.equal,        // Equality checker
-            profile             // data to insert
-        ).0;
+            Nat.equal,          // Equality checker
+            profile
+        );
+
+        // If there is an original value, do not update
+        switch(existing) {
+            // If there are no matches, update profiles
+            case null {
+                profiles := newProfiles;
+            };
+            // Matches pattern of type - opt Profile
+            case (? v) {
+                return false;
+            };
+        };
 
         return true;
     };
 
-    // Read data
-    public query func read(profileId: Nat32) : async ?Profile {
-        let result = Trie.find(profiles, key(profileId), Nat32.equal);
+    // Read profile
+    public func read (profileId : Nat) : async ?Profile {
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(profileId),     // Key
+            Nat.equal           // Equality Checker
+        );
         return result;
     };
 
     // Update profile
-    public func update(profileId: Nat32, profile: Profile) : async Bool {
-        let result = Trie.find(profiles, key(profileId), Nat32.equal);
+    public func update (profileId : Nat, profile : Profile) : async Bool {
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(profileId),     // Key
+            Nat.equal           // Equality Checker
+        );
+
         switch (result){
+            // Do not allow updates to profiles that haven't been created yet
             case null {
                 return false;
             };
             case (? v) {
                 profiles := Trie.replace(
-                    profiles,           // target Trie
+                    profiles,           // Target trie
                     key(profileId),     // Key
-                    Nat32.equal,        // Equality checker
-                    ?profile            // Replacement data
+                    Nat.equal,          // Equality checker
+                    ?profile
                 ).0;
             };
         };
+
         return true;
     };
 
-     // Delete profile
-    public func delete(profileId: Nat32) : async Bool {
-        let result = Trie.find(profiles, key(profileId), Nat32.equal);
+    // Update profile
+    public func delete (profileId : Nat) : async Bool {
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(profileId),     // Key
+            Nat.equal           // Equality Checker
+        );
+
         switch (result){
+            // Do not allow updates to profiles that haven't been created yet
             case null {
                 return false;
             };
             case (? v) {
                 profiles := Trie.replace(
-                    profiles,           // target Trie
+                    profiles,           // Target trie
                     key(profileId),     // Key
-                    Nat32.equal,        // Equality checker
-                    null,               // Replacement data
+                    Nat.equal,          // Equality checker
+                    null
                 ).0;
             };
         };
+
         return true;
     };
 
-    private func key(x : Nat32) : Trie.Key<Nat32> {
-        return { key = x; hash = x };
+    private func key(x : Nat) : Trie.Key<Nat> {
+        return { key = x; hash = Hash.hash(x) }
     };
-
 }
