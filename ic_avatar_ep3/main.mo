@@ -1,46 +1,20 @@
-import Text "mo:base/Text";
-import Nat32 "mo:base/Nat32";
-import Nat "mo:base/Nat";
 import Trie "mo:base/Trie";
-import Bool "mo:base/Bool";
+import Hash "mo:base/Hash";
 import Result "mo:base/Result";
-import Principal "mo:base/Principal";
-import Option "mo:base/Option";
-
 
 actor Avatar {
-    type Response = {
-        code: Nat;
-        success: Bool;
-        message: Text;
-    };
-    // Biographic info  
-    type GivenName = Text;
-    type FamilyName = Text;
-    type Name = Text;
-    type DisplayName = Text;
-    type Location = Text;
-    type About = Text;
-    
-    // Additional Info
-    type Wallet = Text;
-    type Website = Text;
-    type UserPrincipal = Principal;
-    type IntegrationPrincipal = Principal;
-
     type Bio = {
-        givenName: ?GivenName;
-        familyName: ?FamilyName;
-        name: ?Name;
-        displayName: ?DisplayName;
-        location: ?Location;
-        about: ?About;
+        givenName: ?Text;
+        familyName: ?Text;
+        name: ?Text;
+        displayName: ?Text;
+        location: ?Text;
+        about: ?Text;
     };
 
     type Profile = {
         id: Principal;
         bio: Bio;
-        wallets: ?[Wallet];
     };
 
     type ProfileUpdateObj = {
@@ -48,19 +22,14 @@ actor Avatar {
         wallets: ?[Wallet];
     };
 
-    /**
-    * Application State
-    */
+    // Application state
+    stable var profiles : Trie.Trie<Principal, Profile> = Trie.empty();
 
-    // The profile data store
-    private stable var profiles : Trie.Trie<Principal, Profile> = Trie.empty();
 
-    /**
-    * High-Level API
-    */
+    // Application interface
 
-    // Create a profile.
-    public shared (msg) func create(profile : ProfileUpdateObj) : async Result.Result<Profile, Response> {
+    // Create a profile
+    public (msg) func create (profile: Profile) : async Result.Result<Response, Response> {
         // Get caller principal
         let callerId = msg.caller;
 
@@ -71,48 +40,67 @@ actor Avatar {
             wallets = profile.wallets;
         };
 
-        profiles := Trie.put(
-            profiles,          // target Trie
-            key callerId,     // key to insert at
-            Principal.equal,  // matching function
-            userProfile        // data to insert
-        ).0;
+        let (newProfiles, existing) = Trie.put(
+            profiles,           // target Trie
+            key(callerId),     // key to insert at
+            Principal.equal,   // matching function
+            userProfile         // data to insert
+        );
 
-        let response: Response = {
-            code = 201; // Created success code
-            success = true;
-            message = Text.concat("Successfully created profile for principal ", Principal.toText(callerId));
+        // If there is an original value, do not update
+        switch(existing) {
+            // If there are no matches, update profiles
+            case null {
+                profiles := newProfiles;
+             
+                #ok({
+                    code = 201; // Created success code
+                    success = true;
+                    message = Text.concat("Successfully created profile for principal ", Principal.toText(callerId));
+                });
+            };
+            // Matches pattern of type - opt Profile
+            case (? v) {
+                #err({
+                    code = 409; // Conflict
+                    success = false;
+                    message = "Profile already exists for this caller"
+                });
+            };
         };
 
-        let result = Option.unwrap(Trie.find(profiles, key callerId, Principal.equal));
-        #ok(result);
     };
 
-    // Read a profile.
-    public query (msg) func read() : async Result.Result<Profile, Response> {
-        // Get caller principal
+    // Read profile
+    public (msg) func read () : async Result.Result<Profile, Response> {
         let callerId = msg.caller;
-
-        switch (Trie.find(profiles, key callerId, Principal.equal)) {
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(callerId),     // Key
+            Principal.equal    // Equality Checker
+        );
+        switch (result) {
             case null {
                 #err({
                     code = 404; // profile does not exist
                     success = false;
                     message = Text.concat("Profile does not exist for: ", Principal.toText(callerId));
-                })
+                });
             };
             case (? v) {
                 #ok(v);
-            }
+            };
         }
     };
 
-    // // Update a profile.
-    public shared (msg) func update(profile: ProfileUpdateObj) : async Result.Result<Response, Response> {
-        let callerId = msg.caller;        
-
-        let result = Trie.find(profiles, key(callerId), Principal.equal);
-        let exists = Option.isSome(result);
+    // Update profile
+    public (msg) func update (profile : ProfileUpdateObj) : async Result.Result<Response, Response> {
+        let callerId = msg.caller;
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(callerId),     // Key
+            Principal.equal    // Equality Checker
+        );
 
         // Associate user profile with with their principal
         let userProfile: Profile = {
@@ -121,60 +109,69 @@ actor Avatar {
             wallets = profile.wallets;
         };
 
-        if (exists) {
-            profiles := Trie.replace(
-                profiles,
-                key(callerId),
-                Principal.equal,
-                ?userProfile,
-            ).0;
-
-            #ok({
-                code = 200;
-                success = true;
-                message = "Profile updated successfully";
-            });
-        }
-        else {
-            #err({
-                code = 404;
-                success = false;
-                message = "Profile was not available to be updated";
-            });
-        }
-    };
-
-    // // Delete a profile.
-    public shared (msg) func delete() : async Result.Result<Response, Response> {
-        let callerId = msg.caller;        
-
-        switch (Trie.find(profiles, key callerId, Principal.equal)) {
+        switch (result){
+            // Do not allow updates to profiles that haven't been created yet
             case null {
                 #err({
-                    code = 410;
+                    code = 404;
+                    success = false;
+                    message = "Profile was not available to be updated";
+                });
+            };
+            case (? v) {
+                profiles := Trie.replace(
+                    profiles,           // Target trie
+                    key(profileId),     // Key
+                    Principal.equal,   // Equality checker
+                    ?userProfile
+                ).0;
+
+                #ok({
+                    code = 200;
+                    success = true;
+                    message = "Profile updated successfully";
+                });
+            };
+        };
+
+    };
+
+    // Delete profile
+    public (msg) func delete () : async Result.Result<Response, Response> {
+        let callerId = msg.caller;
+        let result = Trie.find(
+            profiles,           //Target Trie
+            key(callerId),     // Key
+            Principal.equal    // Equality Checker
+        );
+
+        switch (result){
+            case null {
+                #err({
+                    code = 404;
                     success = false;
                     message = "Profile was not available to be deleted";
                 });
             };
             case (? v) {
                 profiles := Trie.replace(
-                    profiles,
-                    key(callerId),
-                    Principal.equal,
-                    null,
+                    profiles,           // Target trie
+                    key(profileId),     // Key
+                    Principal.equal,   // Equality checker
+                    null
                 ).0;
+
                 #ok({
                     code = 200;
                     success = true;
                     message = "Profile deleted successfully";
                 });
-            }
-        }
+            };
+        };
+
     };
 
-    // Create a trie key from a profile identifier.
     private func key(x : Principal) : Trie.Key<Principal> {
-        return { key = x; hash = Principal.hash x; };
+        return { key = x; hash = Hash.hash(x) }
     };
-};
- 
+}
