@@ -1,6 +1,8 @@
 import Trie "mo:base/Trie";
 import Hash "mo:base/Hash";
 import Result "mo:base/Result";
+import Principal "mo:base/Principal";
+import Text "mo:base/Text";
 
 actor Avatar {
     type Bio = {
@@ -19,7 +21,12 @@ actor Avatar {
 
     type ProfileUpdateObj = {
         bio: Bio;
-        wallets: ?[Wallet];
+    };
+
+    type Response = {
+        code: Nat;
+        success: Bool;
+        message: Text;
     };
 
     // Application state
@@ -29,7 +36,7 @@ actor Avatar {
     // Application interface
 
     // Create a profile
-    public (msg) func create (profile: Profile) : async Result.Result<Response, Response> {
+    public shared(msg) func create (profile: ProfileUpdateObj) : async Result.Result<Response, Response> {
         // Get caller principal
         let callerId = msg.caller;
 
@@ -37,7 +44,6 @@ actor Avatar {
         let userProfile: Profile = {
             id = callerId;
             bio = profile.bio;
-            wallets = profile.wallets;
         };
 
         let (newProfiles, existing) = Trie.put(
@@ -72,7 +78,7 @@ actor Avatar {
     };
 
     // Read profile
-    public (msg) func read () : async Result.Result<Profile, Response> {
+    public shared(msg) func read () : async Result.Result<Profile, Response> {
         let callerId = msg.caller;
         let result = Trie.find(
             profiles,           //Target Trie
@@ -94,7 +100,7 @@ actor Avatar {
     };
 
     // Update profile
-    public (msg) func update (profile : ProfileUpdateObj) : async Result.Result<Response, Response> {
+    public shared(msg) func update (profile : ProfileUpdateObj) : async Result.Result<Response, Response> {
         let callerId = msg.caller;
         let result = Trie.find(
             profiles,           //Target Trie
@@ -106,7 +112,6 @@ actor Avatar {
         let userProfile: Profile = {
             id = callerId;
             bio = profile.bio;
-            wallets = profile.wallets;
         };
 
         switch (result){
@@ -121,7 +126,7 @@ actor Avatar {
             case (? v) {
                 profiles := Trie.replace(
                     profiles,           // Target trie
-                    key(profileId),     // Key
+                    key(callerId),     // Key
                     Principal.equal,   // Equality checker
                     ?userProfile
                 ).0;
@@ -137,7 +142,7 @@ actor Avatar {
     };
 
     // Delete profile
-    public (msg) func delete () : async Result.Result<Response, Response> {
+    public shared(msg) func delete () : async Result.Result<Response, Response> {
         let callerId = msg.caller;
         let result = Trie.find(
             profiles,           //Target Trie
@@ -156,7 +161,7 @@ actor Avatar {
             case (? v) {
                 profiles := Trie.replace(
                     profiles,           // Target trie
-                    key(profileId),     // Key
+                    key(callerId),     // Key
                     Principal.equal,   // Equality checker
                     null
                 ).0;
@@ -172,6 +177,6 @@ actor Avatar {
     };
 
     private func key(x : Principal) : Trie.Key<Principal> {
-        return { key = x; hash = Hash.hash(x) }
+        return { key = x; hash = Principal.hash(x) }
     };
 }
