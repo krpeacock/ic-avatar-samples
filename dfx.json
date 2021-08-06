@@ -1,0 +1,8 @@
+{
+  "canisters": {
+    "ep3": {
+      "type": "motoko",
+      "main": "ic_avatar_ep3/main.mo"
+    }
+  }
+}
