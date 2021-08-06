@@ -14,7 +14,7 @@ actor Avatar {
         about: ?Text;
     };
 
-    type Profile = {
+     type Profile = {
         id: Principal;
         bio: Bio;
     };
@@ -28,17 +28,16 @@ actor Avatar {
         #AlreadyExists;
     };
 
-    type Result = Result.Result<(), Error>;
-
     // Application state
     stable var profiles : Trie.Trie<Principal, Profile> = Trie.empty();
 
+    stable var next : Principal = 1;
 
     // Application interface
 
     // Create a profile
-    public shared(msg) func create (profile: ProfileUpdateObj) : async Result {
-        // Get caller principal
+    public shared(msg) func create (profile: Profile) : async Result.Result<(), Error> {
+         // Get caller principal
         let callerId = msg.caller;
 
         // Associate user profile with with their principal
@@ -59,7 +58,7 @@ actor Avatar {
             // If there are no matches, update profiles
             case null {
                 profiles := newProfiles;
-             
+                
                 #ok(());
             };
             // Matches pattern of type - opt Profile
@@ -67,7 +66,6 @@ actor Avatar {
                 #err(#AlreadyExists);
             };
         };
-
     };
 
     // Read profile
@@ -78,19 +76,14 @@ actor Avatar {
             key(callerId),     // Key
             Principal.equal    // Equality Checker
         );
-        switch (result) {
-            case null {
-                #err(#NotFound);
-            };
-            case (? v) {
-                #ok(v);
-            };
-        }
+        switch(result) {
+            case null { #err(#NotFound); };
+            case (? value) { #ok(value); };
+        };
     };
 
     // Update profile
-    public shared(msg) func update (profile : ProfileUpdateObj) : async Result {
-        let callerId = msg.caller;
+    public func update (userProfile : ProfileUpdateObj) : async Result.Result<(), Error> {
         let result = Trie.find(
             profiles,           //Target Trie
             key(callerId),     // Key
@@ -115,15 +108,13 @@ actor Avatar {
                     Principal.equal,   // Equality checker
                     ?userProfile
                 ).0;
-
                 #ok(());
             };
         };
-
     };
 
     // Delete profile
-    public shared(msg) func delete () : async Result {
+    public shared(msg) func delete () : async Result.Result<(), Error> {
         let callerId = msg.caller;
         let result = Trie.find(
             profiles,           //Target Trie
@@ -132,6 +123,7 @@ actor Avatar {
         );
 
         switch (result){
+            // Do not delete profiles that haven't been created yet
             case null {
                 #err(#NotFound);
             };
@@ -142,14 +134,13 @@ actor Avatar {
                     Principal.equal,   // Equality checker
                     null
                 ).0;
-
+                
                 #ok(());
             };
         };
-
     };
 
     private func key(x : Principal) : Trie.Key<Principal> {
-        return { key = x; hash = Principal.hash(x) }
+        return { key = x; hash = Hash.hash(x) }
     };
 }
