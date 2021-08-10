@@ -62,10 +62,7 @@ actor Avatar {
             key(profileId),     // Key
             Nat.equal           // Equality Checker
         );
-        switch(result) {
-            case null { #err(#NotFound); };
-            case (? value) { #ok(value); };
-        };
+        return Result.fromOption(result, #NotFound);
     };
 
     // Update profile
@@ -79,7 +76,7 @@ actor Avatar {
         switch (result){
             // Do not allow updates to profiles that haven't been created yet
             case null {
-                #err(#NotFound);
+                #err(#NotFound)
             };
             case (? v) {
                 profiles := Trie.replace(
@@ -102,7 +99,7 @@ actor Avatar {
         );
 
         switch (result){
-            // Do not delete profiles that haven't been created yet
+            // Do not try to delete a profile that hasn't been created yet
             case null {
                 #err(#NotFound);
             };
