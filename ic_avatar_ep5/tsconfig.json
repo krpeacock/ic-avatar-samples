@@ -6,7 +6,8 @@
       "jsx": "react",
       "lib": [
         "ES2020",
-        "DOM"
+        "DOM",
+        "dom.iterable"
       ],
       "module": "commonjs",
       "strict": true,

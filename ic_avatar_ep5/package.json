@@ -16,9 +16,13 @@
     "copy:types": "rsync -avr .dfx/$(echo ${DFX_NETWORK:-'**'})/canisters/** --exclude='assets/' --exclude='idl/' --exclude='*.wasm' --delete src/declarations"
   },
   "devDependencies": {
-    "@dfinity/agent": "0.9.3",
-    "@dfinity/candid": "0.9.3",
-    "@dfinity/principal": "0.9.3",
+    "@dfinity/agent": "0.10.0-beta.1",
+    "@dfinity/candid": "0.10.0-beta.1",
+    "@dfinity/principal": "0.10.0-beta.1",
+    "@svgr/webpack": "^5.5.0",
+    "@types/react": "^17.0.18",
+    "@types/react-dom": "^17.0.9",
+    "@types/styled-components": "^5.1.12",
     "assert": "2.0.0",
     "buffer": "6.0.3",
     "copy-webpack-plugin": "^9.0.1",
@@ -43,7 +47,11 @@
     "last 2 edge version"
   ],
   "dependencies": {
+    "@adobe/react-spectrum": "^3.13.0",
+    "@dfinity/auth-client": "^0.10.0-beta.1",
+    "local-storage": "^2.0.0",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "styled-components": "^5.3.0"
   }
 }
