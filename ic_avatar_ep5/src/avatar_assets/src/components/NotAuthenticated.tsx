@@ -2,7 +2,7 @@ import { Button, Flex, Icon } from "@adobe/react-spectrum";
 import * as React from "react";
 import styled from "styled-components";
 import Loop from "../../assets/loop.svg";
-import { AuthContext } from "../App";
+import { AppContext } from "../App";
 
 interface Props {}
 
@@ -15,7 +15,7 @@ const Section = styled.section`
 
 function NotAuthenticated(props: Props) {
   const {} = props;
-  const { authClient, setIsAuthenticated } = React.useContext(AuthContext);
+  const { authClient, setIsAuthenticated } = React.useContext(AppContext);
 
   return (
     <Section>

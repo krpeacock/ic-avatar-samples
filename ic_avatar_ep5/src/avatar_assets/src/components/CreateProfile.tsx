@@ -1,4 +1,11 @@
-import { ActionButton, Form, TextArea, TextField } from "@adobe/react-spectrum";
+import {
+  ActionButton,
+  Form,
+  Heading,
+  TextArea,
+  TextField,
+  Text,
+} from "@adobe/react-spectrum";
 import { ActorSubclass } from "@dfinity/agent";
 import React, { FormEvent } from "react";
 import {
@@ -7,117 +14,33 @@ import {
   ProfileUpdate,
   _SERVICE,
 } from "../../../declarations/avatar/avatar.did";
+import { AppContext } from "../App";
+import ProfileForm from "./ProfileForm";
 
 interface Props {
   actor: ActorSubclass<_SERVICE>;
   setProfile: React.Dispatch<Profile>;
 }
 
-type BioValues = {
-  [key: string]: [] | [string | undefined];
-};
+const CreateProfile = (props: Props) => {
+  const { actor } = React.useContext(AppContext);
 
-class CreateProfile extends React.Component<Props> {
-  state = {
-    about: "",
-    displayName: "",
-    familyName: "",
-    givenName: "",
-    location: "",
-  };
-
-  formRef = React.createRef();
-
-  constructor(props: Props) {
-    super(props);
-  }
-
-  handleChange(key: string, value: string) {
-    const newState: { [key: string]: string } = {};
-    newState[key] = value;
-    this.setState(newState);
-  }
-
-  async handleSubmit() {
-    const { about, displayName, familyName, givenName, location } = this.state;
-    let name: string = [givenName, familyName].join(" ");
-
-    const newProfile: ProfileUpdate = {
-      bio: {
-        name: name ? [name] : [],
-        givenName: givenName ? [givenName] : [],
-        familyName: familyName ? [familyName] : [],
-        displayName: displayName ? [displayName] : [],
-        location: location ? [location] : [],
-        about: about ? [about] : [],
-      },
-    };
-
-    const createResponse = await this.props.actor.create(newProfile);
+  const submitCallback = async (profile: ProfileUpdate) => {
+    const createResponse = await actor.create(profile);
     console.log(createResponse);
     if ("ok" in createResponse) {
-      const profileResponse = await this.props.actor.read();
+      const profileResponse = await actor.read();
       if ("ok" in profileResponse) {
-        this.props.setProfile(profileResponse.ok);
+        props.setProfile(profileResponse.ok);
       } else {
         console.error(profileResponse.err);
       }
     } else {
       console.error(createResponse.err);
     }
-  }
+  };
 
-  render() {
-    const { about, displayName, familyName, givenName, location } = this.state;
-
-    const handleChange = this.handleChange.bind(this);
-    const handleSubmit = this.handleSubmit.bind(this);
-    return (
-      <section>
-        <h1>Create Profile</h1>
-        <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-        >
-          <TextField
-            label="First Name"
-            name="givenName"
-            value={givenName}
-            onChange={(value) => handleChange("givenName", value)}
-          />
-          <TextField
-            label="Last Name"
-            name="familyName"
-            value={familyName}
-            onChange={(value) => handleChange("familyName", value)}
-          />
-          <TextField
-            label="Profile Name"
-            name="displayName"
-            value={displayName}
-            onChange={(value) => handleChange("displayName", value)}
-          />
-          <TextField
-            label="Location"
-            name="location"
-            value={location}
-            onChange={(value) => handleChange("location", value)}
-          />
-          <TextArea
-            label="About"
-            name="about"
-            value={about}
-            onChange={(value) => handleChange("about", value)}
-          />
-          <ActionButton type="submit" onPress={handleSubmit}>
-            Submit
-          </ActionButton>
-        </Form>
-      </section>
-    );
-  }
-}
+  return <ProfileForm submitCallback={submitCallback} actor={actor} />;
+};
 
 export default CreateProfile;

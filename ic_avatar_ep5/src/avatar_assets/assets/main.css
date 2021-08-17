@@ -16,6 +16,11 @@ img {
     display: block;
     margin: auto;
 }
+
+h1 {
+    font-size: large;
+}
+
 form {
     display: flex;
     flex-flow: row wrap;

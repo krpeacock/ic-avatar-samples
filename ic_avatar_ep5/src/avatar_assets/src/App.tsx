@@ -1,10 +1,13 @@
 import * as React from "react";
-import { Provider, defaultTheme } from "@adobe/react-spectrum";
+import { Provider, defaultTheme, Flex } from "@adobe/react-spectrum";
 import styled from "styled-components";
 import { AuthClient } from "@dfinity/auth-client";
-import { avatar } from "../../declarations/avatar";
+import { avatar, canisterId, createActor } from "../../declarations/avatar";
 import NotAuthenticated from "./components/NotAuthenticated";
 import Home from "./components/Home";
+import Loader from "./components/Loader";
+import { ActorSubclass } from "@dfinity/agent";
+import { _SERVICE } from "../../declarations/avatar/avatar.did";
 
 const Header = styled.header`
   padding: 1rem;
@@ -21,41 +24,61 @@ const Main = styled.main`
   padding: 0 1rem;
 `;
 
-export const AuthContext = React.createContext<{
+export const AppContext = React.createContext<{
   authClient?: AuthClient;
+  actor: ActorSubclass<_SERVICE>;
   setIsAuthenticated?: React.Dispatch<React.SetStateAction<boolean>>;
 }>({
   authClient: undefined,
+  actor: avatar,
 });
 
 const App = () => {
   const [authClient, setAuthClient] = React.useState<AuthClient>();
-  const [loading, setLoading] = React.useState(true);
+  const [actor, setActor] = React.useState<ActorSubclass<_SERVICE>>(avatar);
+  const [loadingMessage, setLoadingMessage] = React.useState("");
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
     AuthClient.create().then((client) => {
       setAuthClient(client);
-      setLoading(false);
+      setLoadingMessage("");
     });
   }, [setAuthClient]);
 
   React.useEffect(() => {
-    authClient?.isAuthenticated().then((result) => setIsAuthenticated(result));
+    // Check whether we're authenticated
+    authClient?.isAuthenticated().then(async (result) => {
+      if (result) {
+        // If we are authenticated, create an actor configured with our identity
+        const actor = createActor(canisterId as string, {
+          agentOptions: {
+            identity: authClient.getIdentity(),
+          },
+        });
+        setActor(actor);
+        setIsAuthenticated(result);
+      }
+    });
   }, [authClient]);
-
-  console.log("isAuthenticated: ", isAuthenticated);
 
   return (
     <Provider theme={defaultTheme}>
-      <AuthContext.Provider value={{ authClient, setIsAuthenticated }}>
+      <AppContext.Provider value={{ authClient, setIsAuthenticated, actor }}>
         <Header>
-          <h1>IC Avatar</h1>
+          <h2>IC Avatar</h2>
         </Header>
         <Main>
-          {!isAuthenticated && !loading ? <NotAuthenticated /> : <Home />}
+          <Flex maxWidth={900} margin="1rem auto">
+            {!isAuthenticated && !loadingMessage ? (
+              <NotAuthenticated />
+            ) : (
+              <Home />
+            )}
+          </Flex>
         </Main>
-      </AuthContext.Provider>
+        {loadingMessage ? <Loader message={loadingMessage} /> : null}
+      </AppContext.Provider>
     </Provider>
   );
 };
