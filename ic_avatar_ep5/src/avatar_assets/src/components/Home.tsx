@@ -4,6 +4,7 @@ import { canisterId, createActor } from "../../../declarations/avatar";
 import { Profile, _SERVICE } from "../../../declarations/avatar/avatar.did";
 import { AuthContext } from "../App";
 import CreateProfile from "./CreateProfile";
+import Loader from "./Loader";
 import ManageProfile from "./ManageProfile";
 var ls = require("local-storage");
 
@@ -47,15 +48,19 @@ function Home(props: Props) {
     });
   }, [actor]);
 
-  if (!isLoaded && !profile && !actor) {
-    return <section>Loading...</section>;
+  if (!isLoaded) {
+    return (
+      <section>
+        <Loader />
+      </section>
+    );
   } else {
     return (
       <section>
-        {profile ? (
-          <ManageProfile profile={profile} />
+        {profile && actor ? (
+          <ManageProfile profile={profile} actor={actor} />
         ) : actor ? (
-          <CreateProfile actor={actor} />
+          <CreateProfile actor={actor} setProfile={setProfile} />
         ) : null}
       </section>
     );

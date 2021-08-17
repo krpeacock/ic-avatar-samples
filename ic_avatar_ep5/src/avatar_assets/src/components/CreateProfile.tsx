@@ -3,12 +3,14 @@ import { ActorSubclass } from "@dfinity/agent";
 import React, { FormEvent } from "react";
 import {
   Bio,
+  Profile,
   ProfileUpdate,
   _SERVICE,
 } from "../../../declarations/avatar/avatar.did";
 
 interface Props {
   actor: ActorSubclass<_SERVICE>;
+  setProfile: React.Dispatch<Profile>;
 }
 
 type BioValues = {
@@ -36,7 +38,7 @@ class CreateProfile extends React.Component<Props> {
     this.setState(newState);
   }
 
-  handleSubmit() {
+  async handleSubmit() {
     const { about, displayName, familyName, givenName, location } = this.state;
     let name: string = [givenName, familyName].join(" ");
 
@@ -51,9 +53,18 @@ class CreateProfile extends React.Component<Props> {
       },
     };
 
-    this.props.actor.create(newProfile).then((response) => {
-      console.log(response);
-    });
+    const createResponse = await this.props.actor.create(newProfile);
+    console.log(createResponse);
+    if ("ok" in createResponse) {
+      const profileResponse = await this.props.actor.read();
+      if ("ok" in profileResponse) {
+        this.props.setProfile(profileResponse.ok);
+      } else {
+        console.error(profileResponse.err);
+      }
+    } else {
+      console.error(createResponse.err);
+    }
   }
 
   render() {

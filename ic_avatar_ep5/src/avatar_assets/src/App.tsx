@@ -44,7 +44,7 @@ const App = () => {
     authClient?.isAuthenticated().then((result) => setIsAuthenticated(result));
   }, [authClient]);
 
-  console.log(isAuthenticated);
+  console.log("isAuthenticated: ", isAuthenticated);
 
   return (
     <Provider theme={defaultTheme}>
