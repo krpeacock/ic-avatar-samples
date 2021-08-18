@@ -23,9 +23,10 @@ interface Props {
 }
 
 const CreateProfile = (props: Props) => {
-  const { actor } = React.useContext(AppContext);
+  const { actor, setLoadingMessage } = React.useContext(AppContext);
 
   const submitCallback = async (profile: ProfileUpdate) => {
+    setLoadingMessage?.("Creating profile");
     const createResponse = await actor.create(profile);
     console.log(createResponse);
     if ("ok" in createResponse) {
@@ -38,6 +39,7 @@ const CreateProfile = (props: Props) => {
     } else {
       console.error(createResponse.err);
     }
+    setLoadingMessage?.("");
   };
 
   return <ProfileForm submitCallback={submitCallback} actor={actor} />;

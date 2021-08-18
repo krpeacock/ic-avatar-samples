@@ -34,6 +34,21 @@ class ProfileForm extends React.Component<Props> {
 
   constructor(props: Props) {
     super(props);
+}
+
+componentDidMount(){
+      if (this.props.initialValues) {
+        const { about, displayName, familyName, givenName, location } =
+          this.props.initialValues.bio;
+        this.setState({
+          about: about.shift(),
+          displayName: displayName.shift(),
+          familyName: familyName.shift(),
+          givenName: givenName.shift(),
+          location: location.shift(),
+        });
+      }
+
   }
 
   handleChange(key: string, value: string) {

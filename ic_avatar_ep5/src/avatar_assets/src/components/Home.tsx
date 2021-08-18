@@ -43,7 +43,7 @@ function Home(props: Props) {
     return (
       <section>
         {profile ? (
-          <ManageProfile profile={profile} actor={actor} />
+          <ManageProfile profile={profile} setProfile={setProfile} />
         ) : (
           <CreateProfile actor={actor} setProfile={setProfile} />
         )}

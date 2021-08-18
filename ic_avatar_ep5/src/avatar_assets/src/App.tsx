@@ -28,6 +28,7 @@ export const AppContext = React.createContext<{
   authClient?: AuthClient;
   actor: ActorSubclass<_SERVICE>;
   setIsAuthenticated?: React.Dispatch<React.SetStateAction<boolean>>;
+  setLoadingMessage?: React.Dispatch<React.SetStateAction<string>>;
 }>({
   authClient: undefined,
   actor: avatar,
@@ -64,7 +65,9 @@ const App = () => {
 
   return (
     <Provider theme={defaultTheme}>
-      <AppContext.Provider value={{ authClient, setIsAuthenticated, actor }}>
+      <AppContext.Provider
+        value={{ authClient, setIsAuthenticated, actor, setLoadingMessage }}
+      >
         <Header>
           <h2>IC Avatar</h2>
         </Header>
