@@ -18,7 +18,7 @@ interface Props {
     bio: Bio;
   };
   submitCallback: (profile: ProfileUpdate) => void;
-  actor: ActorSubclass<_SERVICE>;
+  actor?: ActorSubclass<_SERVICE>;
 }
 
 class ProfileForm extends React.Component<Props> {

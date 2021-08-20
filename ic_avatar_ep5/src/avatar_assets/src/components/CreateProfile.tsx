@@ -10,7 +10,6 @@ import ProfileForm from "./ProfileForm";
 import toast from "react-hot-toast";
 
 interface Props {
-  actor: ActorSubclass<_SERVICE>;
   setProfile: React.Dispatch<ProfileUpdate | null>;
 }
 
@@ -34,7 +33,7 @@ const CreateProfile = (props: Props) => {
     toast.success("Profile created");
 
     // Handle creation and verification async
-    actor.create(profile).then(async (createResponse) => {
+    actor?.create(profile).then(async (createResponse) => {
       if ("ok" in createResponse) {
         const profileResponse = await actor.read();
         if ("ok" in profileResponse) {

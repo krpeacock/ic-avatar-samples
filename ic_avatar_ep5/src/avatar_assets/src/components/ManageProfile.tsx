@@ -51,7 +51,7 @@ function ManageProfile(props: Props) {
       )
     ) {
       setLoadingMessage?.("Deleting your avatar");
-      const result = await actor.delete();
+      const result = await actor?.delete();
       toast.success("Avatar successfully deleted");
       remove("profile");
       setProfile(null);
@@ -73,7 +73,7 @@ function ManageProfile(props: Props) {
     toast.success("Avatar updated!");
 
     // Handle update async
-    actor.update(profile).then(async (profileUpdate) => {
+    actor?.update(profile).then(async (profileUpdate) => {
       if ("ok" in profileUpdate) {
         const profileResponse = await actor.read();
         if ("ok" in profileResponse) {

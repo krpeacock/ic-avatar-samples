@@ -25,7 +25,9 @@ function NotAuthenticated(props: Props) {
         onPress={() => {
           authClient?.login({
             identityProvider: process.env.II_URL,
-            onSuccess: () => setIsAuthenticated?.(true),
+            onSuccess: () => {
+              setIsAuthenticated?.(true);
+            },
           });
         }}
       >

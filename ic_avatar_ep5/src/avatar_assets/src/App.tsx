@@ -40,18 +40,15 @@ const Main = styled.main`
 
 export const AppContext = React.createContext<{
   authClient?: AuthClient;
-  actor: ActorSubclass<_SERVICE>;
+  actor?: ActorSubclass<_SERVICE>;
   setIsAuthenticated?: React.Dispatch<React.SetStateAction<boolean>>;
   setLoadingMessage?: React.Dispatch<React.SetStateAction<string>>;
-}>({
-  authClient: undefined,
-  actor: avatar,
-});
+}>({});
 
 const App = () => {
   const [authClient, setAuthClient] = React.useState<AuthClient>();
-  const [actor, setActor] = React.useState<ActorSubclass<_SERVICE>>(avatar);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [actor, setActor] = React.useState<ActorSubclass<_SERVICE>>();
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = React.useState("");
 
   React.useEffect(() => {
@@ -78,7 +75,7 @@ const App = () => {
         clear();
       }
     });
-  }, [authClient]);
+  }, [authClient, isAuthenticated]);
 
   if (!authClient) return null;
 
@@ -106,7 +103,9 @@ const App = () => {
                   id="logout"
                   onPress={() => {
                     clear();
-                    setIsAuthenticated(false);
+                    setTimeout(() => {
+                      location.reload();
+                    }, 100);
                   }}
                 >
                   Log out

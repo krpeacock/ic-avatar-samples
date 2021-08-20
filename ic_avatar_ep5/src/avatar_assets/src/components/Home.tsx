@@ -36,7 +36,7 @@ function Home(props: Props) {
   >(undefined);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [hasFetched, setHasFetched] = React.useState(false);
-  const { actor } = React.useContext(AppContext);
+  const { actor, authClient } = React.useContext(AppContext);
 
   React.useEffect(() => {
     const storedProfile = ls.get("profile");
@@ -58,28 +58,36 @@ function Home(props: Props) {
       toast.loading("Checking for an existing Avatar");
     }
 
-    actor.read().then((fetchedProfile) => {
-      if ("ok" in fetchedProfile) {
-        const profileOptions = { bio: { ...fetchedProfile.ok.bio } };
-        // Check if any changes
-        if (compareProfiles(profile, profileOptions)) {
-          return;
-        } else {
-          setProfile(profileOptions);
+    if (!actor) {
+      const actor = createActor(canisterId as string, {
+        agentOptions: {
+          identity: authClient?.getIdentity(),
+        },
+      });
 
-          // Save profile locally
-          toast.success("Profile loaded from IC");
-          set("profile", JSON.stringify(profileOptions));
+      actor.read().then((fetchedProfile) => {
+        if ("ok" in fetchedProfile) {
+          const profileOptions = { bio: { ...fetchedProfile.ok.bio } };
+          // Check if any changes
+          if (compareProfiles(profile, profileOptions)) {
+            return;
+          } else {
+            setProfile(profileOptions);
+
+            // Save profile locally
+            toast.success("Profile loaded from IC");
+            set("profile", JSON.stringify(profileOptions));
+          }
+        } else {
+          console.log(fetchedProfile.err);
+          if (get("profile")) {
+            remove("profile");
+            toast.error("Failed to load profile from IC");
+            setProfile(null);
+          }
         }
-      } else {
-        console.log(fetchedProfile.err);
-        if (get("profile")) {
-          remove("profile");
-          toast.error("Failed to load profile from IC");
-          setProfile(null);
-        }
-      }
-    });
+      });
+    }
   }, [actor, profile, isLoaded]);
 
   return (
@@ -87,7 +95,7 @@ function Home(props: Props) {
       {profile ? (
         <ManageProfile profile={profile} setProfile={setProfile} />
       ) : (
-        <CreateProfile actor={actor} setProfile={setProfile} />
+        <CreateProfile setProfile={setProfile} />
       )}
     </section>
   );
