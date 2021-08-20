@@ -22,11 +22,11 @@ function NotAuthenticated(props: Props) {
       <h3>You are not authenticated</h3>
       <Button
         variant="cta"
-        onPress={async () => {
-          await authClient?.login({
+        onPress={() => {
+          authClient?.login({
             identityProvider: process.env.II_URL,
+            onSuccess: () => setIsAuthenticated?.(true),
           });
-          setIsAuthenticated?.(true);
         }}
       >
         Login with&nbsp;

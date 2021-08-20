@@ -8,6 +8,7 @@ import Home from "./components/Home";
 import Loader from "./components/Loader";
 import { ActorSubclass } from "@dfinity/agent";
 import { _SERVICE } from "../../declarations/avatar/avatar.did";
+import { Toaster } from "react-hot-toast";
 
 const Header = styled.header`
   padding: 1rem;
@@ -37,8 +38,8 @@ export const AppContext = React.createContext<{
 const App = () => {
   const [authClient, setAuthClient] = React.useState<AuthClient>();
   const [actor, setActor] = React.useState<ActorSubclass<_SERVICE>>(avatar);
-  const [loadingMessage, setLoadingMessage] = React.useState("");
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [loadingMessage, setLoadingMessage] = React.useState("");
 
   React.useEffect(() => {
     AuthClient.create().then((client) => {
@@ -63,26 +64,41 @@ const App = () => {
     });
   }, [authClient]);
 
+  if (!authClient) return null;
+
   return (
-    <Provider theme={defaultTheme}>
-      <AppContext.Provider
-        value={{ authClient, setIsAuthenticated, actor, setLoadingMessage }}
-      >
-        <Header>
-          <h2>IC Avatar</h2>
-        </Header>
-        <Main>
-          <Flex maxWidth={900} margin="1rem auto">
-            {!isAuthenticated && !loadingMessage ? (
-              <NotAuthenticated />
-            ) : (
-              <Home />
-            )}
-          </Flex>
-        </Main>
-        {loadingMessage ? <Loader message={loadingMessage} /> : null}
-      </AppContext.Provider>
-    </Provider>
+    <>
+      <Toaster
+        toastOptions={{
+          duration: 5000,
+          position: "bottom-center",
+        }}
+      />
+      <Provider theme={defaultTheme}>
+        <AppContext.Provider
+          value={{
+            authClient,
+            setIsAuthenticated,
+            actor,
+            setLoadingMessage,
+          }}
+        >
+          <Header>
+            <h2>IC Avatar</h2>
+          </Header>
+          <Main>
+            <Flex maxWidth={900} margin="1rem auto">
+              {!isAuthenticated && !loadingMessage ? (
+                <NotAuthenticated />
+              ) : (
+                <Home />
+              )}
+            </Flex>
+          </Main>
+          {loadingMessage ? <Loader message={loadingMessage} /> : null}
+        </AppContext.Provider>
+      </Provider>
+    </>
   );
 };
 

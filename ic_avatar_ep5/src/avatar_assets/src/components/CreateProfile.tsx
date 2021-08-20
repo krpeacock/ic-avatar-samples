@@ -1,45 +1,52 @@
-import {
-  ActionButton,
-  Form,
-  Heading,
-  TextArea,
-  TextField,
-  Text,
-} from "@adobe/react-spectrum";
 import { ActorSubclass } from "@dfinity/agent";
-import React, { FormEvent } from "react";
+import { clear, remove, set } from "local-storage";
+import React from "react";
 import {
-  Bio,
-  Profile,
   ProfileUpdate,
   _SERVICE,
 } from "../../../declarations/avatar/avatar.did";
 import { AppContext } from "../App";
 import ProfileForm from "./ProfileForm";
+import toast from "react-hot-toast";
 
 interface Props {
   actor: ActorSubclass<_SERVICE>;
-  setProfile: React.Dispatch<Profile>;
+  setProfile: React.Dispatch<ProfileUpdate | null>;
 }
 
 const CreateProfile = (props: Props) => {
-  const { actor, setLoadingMessage } = React.useContext(AppContext);
+  const { actor } = React.useContext(AppContext);
+  const { setProfile } = props;
+
+  function handleCreationError() {
+    clear();
+    setProfile(null);
+    toast.error("There was a problem creating your profile");
+  }
 
   const submitCallback = async (profile: ProfileUpdate) => {
-    setLoadingMessage?.("Creating profile");
-    const createResponse = await actor.create(profile);
-    console.log(createResponse);
-    if ("ok" in createResponse) {
-      const profileResponse = await actor.read();
-      if ("ok" in profileResponse) {
-        props.setProfile(profileResponse.ok);
+    // Save profile locally
+    set("profile", JSON.stringify(profile));
+
+    // Optimistic update
+    setProfile(profile);
+    toast.success("Profile created");
+
+    // Handle creation and verification async
+    actor.create(profile).then(async (createResponse) => {
+      if ("ok" in createResponse) {
+        const profileResponse = await actor.read();
+        if ("ok" in profileResponse) {
+          // Do nothing, we already updated
+        } else {
+          console.error(profileResponse.err);
+          handleCreationError();
+        }
       } else {
-        console.error(profileResponse.err);
+        handleCreationError();
+        console.error(createResponse.err);
       }
-    } else {
-      console.error(createResponse.err);
-    }
-    setLoadingMessage?.("");
+    });
   };
 
   return <ProfileForm submitCallback={submitCallback} actor={actor} />;

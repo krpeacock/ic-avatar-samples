@@ -10,8 +10,10 @@ import { ActorSubclass } from "@dfinity/agent";
 import Cancel from "@spectrum-icons/workflow/Cancel";
 import Delete from "@spectrum-icons/workflow/Delete";
 import Edit from "@spectrum-icons/workflow/Edit";
+import { remove, set } from "local-storage";
 import * as React from "react";
 import { useContext } from "react";
+import toast from "react-hot-toast";
 import styled from "styled-components";
 import {
   Profile,
@@ -19,6 +21,7 @@ import {
   _SERVICE,
 } from "../../../declarations/avatar/avatar.did";
 import { AppContext } from "../App";
+import { compareProfiles } from "./Home";
 import ProfileForm from "./ProfileForm";
 
 const DetailsList = styled.dl`
@@ -28,8 +31,8 @@ const DetailsList = styled.dl`
 `;
 
 interface Props {
-  profile: Profile;
-  setProfile: React.Dispatch<Profile>;
+  profile: ProfileUpdate;
+  setProfile: React.Dispatch<ProfileUpdate | null>;
 }
 
 function ManageProfile(props: Props) {
@@ -42,25 +45,53 @@ function ManageProfile(props: Props) {
   }, [profile]);
 
   const deleteProfile = async () => {
-    const result = await actor.delete();
-    console.log(result);
+    if (
+      confirm(
+        "Are you sure you want to delete your profile? This will be permanent"
+      )
+    ) {
+      setLoadingMessage?.("Deleting your avatar");
+      const result = await actor.delete();
+      toast.success("Avatar successfully deleted");
+      remove("profile");
+      setProfile(null);
+      setLoadingMessage?.("");
+      console.log(result);
+    }
+  };
+
+  const compare = (updatedProfile: ProfileUpdate) => {
+    return compareProfiles(profile, updatedProfile);
   };
 
   const submitCallback = async (profile: ProfileUpdate) => {
-    setLoadingMessage?.("Updating your profile");
-    const createResponse = await actor.update(profile);
-    console.log(createResponse);
-    if ("ok" in createResponse) {
-      const profileResponse = await actor.read();
-      if ("ok" in profileResponse) {
-        setProfile(profileResponse.ok);
+    // Save profile locally
+    set("profile", JSON.stringify(profile));
+
+    // Optimistically update
+    setProfile(profile);
+    toast.success("Avatar updated!");
+
+    // Handle update async
+    actor.update(profile).then(async (profileUpdate) => {
+      if ("ok" in profileUpdate) {
+        const profileResponse = await actor.read();
+        if ("ok" in profileResponse) {
+          // Don't do anything if there is no difference.
+          if (!compare(profileResponse.ok)) return;
+
+          // Save profile locally
+          set("profile", JSON.stringify(profileResponse.ok));
+          setProfile(profileResponse.ok);
+        } else {
+          console.error(profileResponse.err);
+          toast.error("Failed to read profile from IC");
+        }
       } else {
-        console.error(profileResponse.err);
+        console.error(profileUpdate.err);
+        toast.error("Failed to save update to IC");
       }
-    } else {
-      console.error(createResponse.err);
-    }
-    setLoadingMessage?.("");
+    });
   };
 
   if (isEditing) {
