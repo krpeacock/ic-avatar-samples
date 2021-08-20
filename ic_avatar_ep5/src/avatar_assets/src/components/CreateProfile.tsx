@@ -15,11 +15,12 @@ interface Props {
 }
 
 const CreateProfile = (props: Props) => {
-  const { actor } = React.useContext(AppContext);
+  const { actor, setIsAuthenticated } = React.useContext(AppContext);
   const { setProfile } = props;
 
   function handleCreationError() {
-    clear();
+    remove("profile");
+    setIsAuthenticated?.(false);
     setProfile(null);
     toast.error("There was a problem creating your profile");
   }
