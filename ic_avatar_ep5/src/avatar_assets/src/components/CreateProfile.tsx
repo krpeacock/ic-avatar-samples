@@ -45,6 +45,7 @@ const CreateProfile = (props: Props) => {
         }
       } else {
         handleCreationError();
+        remove("ic-delegation");
         console.error(createResponse.err);
       }
     });

@@ -1,5 +1,10 @@
 import * as React from "react";
-import { Provider, defaultTheme, Flex } from "@adobe/react-spectrum";
+import {
+  Provider,
+  defaultTheme,
+  Flex,
+  ActionButton,
+} from "@adobe/react-spectrum";
 import styled from "styled-components";
 import { AuthClient } from "@dfinity/auth-client";
 import { avatar, canisterId, createActor } from "../../declarations/avatar";
@@ -9,13 +14,21 @@ import Loader from "./components/Loader";
 import { ActorSubclass } from "@dfinity/agent";
 import { _SERVICE } from "../../declarations/avatar/avatar.did";
 import { Toaster } from "react-hot-toast";
+import { clear } from "local-storage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const Header = styled.header`
+  position: relative;
   padding: 1rem;
   display: flex;
   justify-content: center;
   h1 {
     margin-top: 0;
+  }
+  #logout {
+    position: absolute;
+    right: 0.5rem;
+    top: 0.5rem;
   }
 `;
 
@@ -60,6 +73,9 @@ const App = () => {
         });
         setActor(actor);
         setIsAuthenticated(result);
+      } else {
+        // Wipe local state;
+        clear();
       }
     });
   }, [authClient]);
@@ -74,30 +90,43 @@ const App = () => {
           position: "bottom-center",
         }}
       />
-      <Provider theme={defaultTheme}>
-        <AppContext.Provider
-          value={{
-            authClient,
-            setIsAuthenticated,
-            actor,
-            setLoadingMessage,
-          }}
-        >
-          <Header>
-            <h2>IC Avatar</h2>
-          </Header>
-          <Main>
-            <Flex maxWidth={900} margin="1rem auto">
-              {!isAuthenticated && !loadingMessage ? (
-                <NotAuthenticated />
-              ) : (
-                <Home />
-              )}
-            </Flex>
-          </Main>
-          {loadingMessage ? <Loader message={loadingMessage} /> : null}
-        </AppContext.Provider>
-      </Provider>
+      <ErrorBoundary>
+        <Provider theme={defaultTheme}>
+          <AppContext.Provider
+            value={{
+              authClient,
+              setIsAuthenticated,
+              actor,
+              setLoadingMessage,
+            }}
+          >
+            <Header>
+              {isAuthenticated ? (
+                <ActionButton
+                  id="logout"
+                  onPress={() => {
+                    clear();
+                    setIsAuthenticated(false);
+                  }}
+                >
+                  Log out
+                </ActionButton>
+              ) : null}
+              <h2>IC Avatar</h2>
+            </Header>
+            <Main>
+              <Flex maxWidth={900} margin="1rem auto">
+                {!isAuthenticated && !loadingMessage ? (
+                  <NotAuthenticated />
+                ) : (
+                  <Home />
+                )}
+              </Flex>
+            </Main>
+            {loadingMessage ? <Loader message={loadingMessage} /> : null}
+          </AppContext.Provider>
+        </Provider>
+      </ErrorBoundary>
     </>
   );
 };

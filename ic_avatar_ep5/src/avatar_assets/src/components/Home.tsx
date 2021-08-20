@@ -35,6 +35,7 @@ function Home(props: Props) {
     ProfileUpdate | null | undefined
   >(undefined);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [hasFetched, setHasFetched] = React.useState(false);
   const { actor } = React.useContext(AppContext);
 
   React.useEffect(() => {
@@ -49,7 +50,13 @@ function Home(props: Props) {
 
   React.useEffect(() => {
     // Return if we haven't checked localstorage yet
-    if (profile === undefined || isLoaded) return;
+    console.trace("home before check");
+    if (profile === undefined || hasFetched) return;
+    setHasFetched(true);
+
+    if (profile === null) {
+      toast.loading("Checking for an existing Avatar");
+    }
 
     actor.read().then((fetchedProfile) => {
       if ("ok" in fetchedProfile) {
@@ -61,8 +68,8 @@ function Home(props: Props) {
           setProfile(profileOptions);
 
           // Save profile locally
-          set("profile", JSON.stringify(profileOptions));
           toast.success("Profile loaded from IC");
+          set("profile", JSON.stringify(profileOptions));
         }
       } else {
         console.log(fetchedProfile.err);
