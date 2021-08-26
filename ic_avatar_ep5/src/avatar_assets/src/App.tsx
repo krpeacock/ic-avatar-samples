@@ -6,16 +6,30 @@ import {
   ActionButton,
 } from "@adobe/react-spectrum";
 import styled from "styled-components";
-import { AuthClient } from "@dfinity/auth-client";
-import { avatar, canisterId, createActor } from "../../declarations/avatar";
 import NotAuthenticated from "./components/NotAuthenticated";
 import Home from "./components/Home";
-import Loader from "./components/Loader";
-import { ActorSubclass } from "@dfinity/agent";
-import { _SERVICE } from "../../declarations/avatar/avatar.did";
-import { Toaster } from "react-hot-toast";
-import { clear } from "local-storage";
+import { _SERVICE, ProfileUpdate } from "../../declarations/avatar/avatar.did";
+import toast, { Toaster } from "react-hot-toast";
 import ErrorBoundary from "./components/ErrorBoundary";
+import {
+  BrowserRouter as Router,
+  Redirect,
+  Route,
+  Switch,
+  useHistory,
+  withRouter,
+} from "react-router-dom";
+import { createBrowserHistory } from "history";
+import CreateProfile from "./components/CreateProfile";
+import ManageProfile from "./components/ManageProfile";
+import { emptyProfile, useAuthClient, useProfile } from "./hooks";
+import { AuthClient } from "@dfinity/auth-client";
+import { ActorSubclass } from "@dfinity/agent";
+import { useEffect } from "react";
+import { clear, remove } from "local-storage";
+import { useState } from "react";
+import RedirectManager from "./components/RedirectManager";
+import { compareProfiles } from "./utils";
 
 const Header = styled.header`
   position: relative;
@@ -40,42 +54,69 @@ const Main = styled.main`
 
 export const AppContext = React.createContext<{
   authClient?: AuthClient;
-  actor?: ActorSubclass<_SERVICE>;
+  setAuthClient?: React.Dispatch<AuthClient>;
+  isAuthenticated?: boolean;
   setIsAuthenticated?: React.Dispatch<React.SetStateAction<boolean>>;
-  setLoadingMessage?: React.Dispatch<React.SetStateAction<string>>;
-}>({});
+  login: () => void;
+  logout: () => void;
+  actor?: ActorSubclass<_SERVICE>;
+  profile?: ProfileUpdate;
+  updateProfile?: React.Dispatch<ProfileUpdate>;
+}>({
+  login: () => {},
+  logout: () => {},
+  profile: emptyProfile,
+});
 
 const App = () => {
-  const [authClient, setAuthClient] = React.useState<AuthClient>();
-  const [actor, setActor] = React.useState<ActorSubclass<_SERVICE>>();
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
-  const [loadingMessage, setLoadingMessage] = React.useState("");
+  const history = createBrowserHistory();
+  const {
+    authClient,
+    setAuthClient,
+    isAuthenticated,
+    setIsAuthenticated,
+    login,
+    logout,
+    actor,
+  } = useAuthClient();
+  const identity = authClient?.getIdentity();
+  const { profile, updateProfile } = useProfile({ identity });
 
-  React.useEffect(() => {
-    AuthClient.create().then((client) => {
-      setAuthClient(client);
-      setLoadingMessage("");
-    });
-  }, [setAuthClient]);
+  useEffect(() => {
+    if (history.location.pathname === "/") return;
 
-  React.useEffect(() => {
-    // Check whether we're authenticated
-    authClient?.isAuthenticated().then(async (result) => {
-      if (result) {
-        // If we are authenticated, create an actor configured with our identity
-        const actor = createActor(canisterId as string, {
-          agentOptions: {
-            identity: authClient.getIdentity(),
-          },
-        });
-        setActor(actor);
-        setIsAuthenticated(result);
-      } else {
-        // Wipe local state;
-        clear();
+    if (actor) {
+      if (!profile) {
+        toast.loading("Checking the IC for an existing avatar");
       }
-    });
-  }, [authClient, isAuthenticated]);
+      actor.read().then((result) => {
+        if (history.location.pathname === "/") return;
+        if ("ok" in result) {
+          // Return if IC profile matches current
+          if (compareProfiles(profile, result.ok)) {
+            return;
+          }
+          toast.success("Updated avatar from IC");
+          updateProfile(result.ok);
+        } else {
+          if ("NotAuthorized" in result.err) {
+            // clear local delegation and log in
+            toast.error("Your session expired. Please reauthenticate");
+            logout();
+          } else if ("NotFound" in result.err) {
+            // User has deleted account
+            remove("profile");
+            if (profile) {
+              toast.error("Avatar not found in IC. Please try creating again");
+            }
+            updateProfile(undefined);
+          } else {
+            toast.error("Error: " + Object.keys(result.err)[0]);
+          }
+        }
+      });
+    }
+  }, [actor]);
 
   if (!authClient) return null;
 
@@ -88,43 +129,56 @@ const App = () => {
         }}
       />
       <ErrorBoundary>
-        <Provider theme={defaultTheme}>
-          <AppContext.Provider
-            value={{
-              authClient,
-              setIsAuthenticated,
-              actor,
-              setLoadingMessage,
-            }}
-          >
-            <Header>
-              {isAuthenticated ? (
-                <ActionButton
-                  id="logout"
-                  onPress={() => {
-                    clear();
-                    setTimeout(() => {
-                      location.reload();
-                    }, 100);
-                  }}
-                >
-                  Log out
-                </ActionButton>
-              ) : null}
-              <h2>IC Avatar</h2>
-            </Header>
-            <Main>
-              <Flex maxWidth={900} margin="1rem auto">
-                {!isAuthenticated && !loadingMessage ? (
-                  <NotAuthenticated />
-                ) : (
-                  <Home />
-                )}
-              </Flex>
-            </Main>
-            {loadingMessage ? <Loader message={loadingMessage} /> : null}
-          </AppContext.Provider>
-        </Provider>
+        <AppContext.Provider
+          value={{
+            authClient,
+            setAuthClient,
+            isAuthenticated,
+            setIsAuthenticated,
+            login,
+            logout,
+            actor,
+            profile,
+            updateProfile,
+          }}
+        >
+          <Provider theme={defaultTheme}>
+            <Router>
+              <RedirectManager />
+              <Header>
+                <Route path="/manage">
+                  <ActionButton id="logout" onPress={logout}>
+                    Log out
+                  </ActionButton>
+                </Route>
+                <Route path="/create">
+                  <ActionButton id="logout" onPress={logout}>
+                    Log out
+                  </ActionButton>
+                </Route>
+                <h2>IC Avatar</h2>
+              </Header>
+              <Main>
+                <Flex maxWidth={700} margin="2rem auto" id="main-container">
+                  <Switch>
+                    <Route path="/" exact>
+                      <Flex direction="column">
+                        <Home />
+                        <NotAuthenticated />
+                      </Flex>
+                    </Route>
+                    <Route path="/manage" exact>
+                      <ManageProfile />
+                    </Route>
+                    <Route path="/create" exact>
+                      <CreateProfile />
+                    </Route>
+                  </Switch>
+                </Flex>
+              </Main>
+            </Router>
+          </Provider>
+        </AppContext.Provider>
       </ErrorBoundary>
     </>
   );

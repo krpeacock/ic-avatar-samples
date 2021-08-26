@@ -1,26 +1,28 @@
-import { ActorSubclass } from "@dfinity/agent";
-import { clear, remove, set } from "local-storage";
+import { remove, set } from "local-storage";
 import React from "react";
 import {
   ProfileUpdate,
   _SERVICE,
 } from "../../../declarations/avatar/avatar.did";
-import { AppContext } from "../App";
 import ProfileForm from "./ProfileForm";
 import toast from "react-hot-toast";
+import { emptyProfile } from "../hooks";
+import { useContext } from "react";
+import { AppContext } from "../App";
+import { useEffect } from "react";
 
-interface Props {
-  setProfile: React.Dispatch<ProfileUpdate | null>;
-}
+const CreateProfile = () => {
+  const { setIsAuthenticated, isAuthenticated, actor, profile, updateProfile } =
+    useContext(AppContext);
 
-const CreateProfile = (props: Props) => {
-  const { actor, setIsAuthenticated } = React.useContext(AppContext);
-  const { setProfile } = props;
+  useEffect(() => {
+    console.log("profile", profile);
+  }, [profile, isAuthenticated]);
 
   function handleCreationError() {
     remove("profile");
     setIsAuthenticated?.(false);
-    setProfile(null);
+    updateProfile?.(emptyProfile);
     toast.error("There was a problem creating your profile");
   }
 
@@ -29,7 +31,7 @@ const CreateProfile = (props: Props) => {
     set("profile", JSON.stringify(profile));
 
     // Optimistic update
-    setProfile(profile);
+    updateProfile?.(profile);
     toast.success("Profile created");
 
     // Handle creation and verification async
@@ -50,7 +52,13 @@ const CreateProfile = (props: Props) => {
     });
   };
 
-  return <ProfileForm submitCallback={submitCallback} actor={actor} />;
+  return (
+    <ProfileForm
+      submitCallback={submitCallback}
+      actor={actor}
+      profile={emptyProfile}
+    />
+  );
 };
 
 export default CreateProfile;

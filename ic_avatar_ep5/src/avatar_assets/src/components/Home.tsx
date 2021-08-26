@@ -1,102 +1,21 @@
-import { ActorSubclass } from "@dfinity/agent";
 import * as React from "react";
-import { canisterId, createActor } from "../../../declarations/avatar";
-import {
-  Profile,
-  ProfileUpdate,
-  _SERVICE,
-} from "../../../declarations/avatar/avatar.did";
-import { AppContext } from "../App";
-import CreateProfile from "./CreateProfile";
-import Loader from "./Loader";
-import ManageProfile from "./ManageProfile";
-var ls = require("local-storage");
-import toast from "react-hot-toast";
-import { get, remove, set } from "local-storage";
+import { _SERVICE } from "../../../declarations/avatar/avatar.did";
+import { Button, Text } from "@adobe/react-spectrum";
+import ImageProfile from "@spectrum-icons/workflow/ImageProfile";
+import { useHistory } from "react-router-dom";
 
-interface Props {}
-
-export function compareProfiles(p1: any | null, p2: any) {
-  console.log(p1);
-  console.log(p2);
-  if (!p1) return false;
-
-  for (const key in p1.bio) {
-    if (Object.prototype.hasOwnProperty.call(p1.bio, key)) {
-      const element = p1.bio[key];
-      if (element[0] !== p2.bio[key][0]) return false;
-    }
-  }
-  return true;
-}
-
-function Home(props: Props) {
-  const [profile, setProfile] = React.useState<
-    ProfileUpdate | null | undefined
-  >(undefined);
-  const [isLoaded, setIsLoaded] = React.useState(false);
-  const [hasFetched, setHasFetched] = React.useState(false);
-  const { actor, authClient } = React.useContext(AppContext);
-
-  React.useEffect(() => {
-    const storedProfile = ls.get("profile");
-    if (storedProfile) {
-      setProfile(JSON.parse(storedProfile) as ProfileUpdate);
-    } else {
-      setProfile(null);
-    }
-    setIsLoaded(true);
-  }, []);
-
-  React.useEffect(() => {
-    // Return if we haven't checked localstorage yet
-    console.trace("home before check");
-    if (profile === undefined || hasFetched) return;
-    setHasFetched(true);
-
-    if (profile === null) {
-      toast.loading("Checking for an existing Avatar");
-    }
-
-    if (!actor) {
-      const actor = createActor(canisterId as string, {
-        agentOptions: {
-          identity: authClient?.getIdentity(),
-        },
-      });
-
-      actor.read().then((fetchedProfile) => {
-        if ("ok" in fetchedProfile) {
-          const profileOptions = { bio: { ...fetchedProfile.ok.bio } };
-          // Check if any changes
-          if (compareProfiles(profile, profileOptions)) {
-            return;
-          } else {
-            setProfile(profileOptions);
-
-            // Save profile locally
-            toast.success("Profile loaded from IC");
-            set("profile", JSON.stringify(profileOptions));
-          }
-        } else {
-          console.log(fetchedProfile.err);
-          if (get("profile")) {
-            remove("profile");
-            toast.error("Failed to load profile from IC");
-            setProfile(null);
-          }
-        }
-      });
-    }
-  }, [actor, profile, isLoaded]);
+function Home() {
+  const history = useHistory();
 
   return (
     <section>
-      {profile ? (
-        <ManageProfile profile={profile} setProfile={setProfile} />
-      ) : (
-        <CreateProfile setProfile={setProfile} />
-      )}
+      <h2>Welcome to IC Avatar!</h2>
+      <p>
+        This is an open-source, instructional application, built on the Internet
+        Computer. You can create an Avatar on this site, which is a private
+        profile that you will be able to use to link with other applications and
+        choose what info you want to share.
+      </p>
     </section>
   );
 }

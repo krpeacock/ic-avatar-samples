@@ -10,6 +10,14 @@ body {
     min-height: 100vh;
 }
 
+#main-container {
+    justify-content: center;
+    align-items: top;
+    border: 1px solid white;
+    min-height: 400px;
+    padding: 2rem;
+}
+
 img {
     max-width: 50vw;
     max-height: 25vw;
